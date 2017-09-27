@@ -1,0 +1,602 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 30 16:47:03 2017
+
+@author: Andy
+"""
+
+
+import urllib2, re
+import numpy as np
+import pandas as pd
+
+
+beg_week = input('From week?')
+
+end_week = input('Through week?')
+#
+num_teams = input('Number of teams?')
+
+teams = []
+
+for p in range(num_teams):
+#
+    teams.append(p+1)
+
+
+num_cats = 10
+
+urls = []
+
+league_num = input('League number?')
+
+#list of line 2's is a list of team 14, 13, 12, etc's lines for one week
+
+#list of line 1's is a list of team 1, 2, 3's for one week. These may have to be converted to numpy arrays or dictionaries to put them into a .csv or squl
+
+#team_names = ['Andy','Caputo','Howard','Jeff', 'Credit','Stacy','Zach', 'Johnny', 'Malco', 'Joe', 'Ryan', 'Fairbank', 'Quinn', 'Jerry']
+
+ast_regex= '(\.?(?:\d{1,3}?)(\.?)(?:\d{2,3})\*)'
+
+tie_regex = 'No-pend\"\>(\d{1,3}\.?\d{0,8})'
+
+team_locator = '\'Grid-u\sNowrap\'\>(?:\<a\s{2}href="\/b1\/\d{1,6}\/\d{1,2}"\>)'
+
+incl_ties = '(?:((?:[0-9]|\.|\*){1,5})(?:\<\/a\>)?(?:\<\/div\>)(?:\<\/td\>)(?:\<td\sclass=\")(?:[A-Z]*|[a-z]*|\s|-|\d*)*"\>\<div\s\>|(-)<\/div\>\<)'
+
+s = []
+
+t = []
+
+xWa = np.zeros((num_teams,(end_week-beg_week+1)))
+
+for z in range(end_week-beg_week+1):
+
+    list_of_line1s = []
+
+    list_of_line2sP = []
+
+    for q in range(len(teams)/2):
+    
+        url = 'http://baseball.fantasysports.yahoo.com/b1/' + str(league_num) + '/matchup?week=' + str(z+beg_week) + '&mid1=' + str(teams[q]) + '&mid2=' + str(teams[-(q+1)])
+        
+        
+        	#str(teams[i]) + '&mid2=' + str(teams[-(i+1)])
+         
+         #'13' + '&mid2=' + '2'
+        
+        results = urllib2.urlopen(url)
+        
+        	#print results.info()
+        
+        html = results.read()
+    
+        numbers_regex = '(\d{2,3})'
+        
+        team1 = []
+        team2 = []
+        team1p = []
+    
+        pre_stat = re.split(team_locator,html)
+        #
+        stat_line1 = re.split(incl_ties,pre_stat[1])
+        #
+        for c in range(len(stat_line1)):
+    
+            if stat_line1[c]:
+
+                if len(stat_line1[c]) < 8 and len(stat_line1[c]) > 0:
+
+                    team1p.append(stat_line1[c])
+            
+                #print c
+
+#            if len(team1p) != 10:
+#    
+#                for v in range(len(team1p)):
+#        
+#                    if v <= 9:
+#            
+#                        team1.append(team1p[v])
+#            
+#                    else:
+#    
+#                        team1 = team1p
+     
+        #team1 includes astricked tied values. Find them and then replace using tie_regex
+    
+        team2p = []
+        
+        stat_line2 = re.split(incl_ties,pre_stat[2])
+        
+       
+        
+        for e in range(len(stat_line2)):
+            
+            if stat_line2[e]:
+        
+                if len(stat_line2[e]) < 8 and len(stat_line2[e]) > 0:
+        
+                    team2p.append(stat_line2[e])
+                    
+                   # print e
+    
+        if len(team2p) != 10:
+            
+            for e in range(len(team2p)):
+                
+                if e <= 11:
+                    
+                    team2.append(team2p[e])
+                    
+        else:
+            
+            team2 = team2p
+            
+        team2pp = team2
+        
+        team2 = []
+
+        for f in range(num_cats/2):
+            
+            team1.append(team1p[f+1])
+            
+            team2.append(team2pp[f+1])
+            
+        for g in range(num_cats/2):
+            
+            team1.append(team1p[g+7])
+            
+            team2.append(team2pp[g+7])
+        
+#        for d in range(len(team1)):
+#            
+#            if team1[d] == '-':
+#                
+#                if d == 4:
+#                    
+#                    team1[d] = '-1'
+#        
+#                else:
+#                    
+#                    team1[d] = '99999'
+#        
+#            if team1[d] == '-':
+#            
+#                if d == 4:
+#                    
+#                    team1[d] = '-1'
+#            
+#                else:
+#                    
+#                    team1[d] = '99999'
+                    
+        for d in range(len(team2)):
+            
+            if team1[d] == '-':
+                
+                if d == 4:
+                    
+                    team1[d] = '-1'
+        
+                else:
+                    
+                    team1[d] = '99999'
+        
+            if team2[d] == '-':
+            
+                if d == 4:
+                    
+                    team2[d] = '-1'
+            
+                else:
+                    
+                    team2[d] = '99999'
+                    
+#        er = 0
+#        
+#        if len(team1) != 10:
+#        
+#            er = 1
+#            
+#            print 'Error in team1'
+#             
+#            print len(team1)
+#        
+#        if er == 1:
+#        
+#        	pass            
+    
+        replace_tie_locs1 = []
+        
+        replace_tie_locs2 = []
+        
+        untied_vals = []
+        
+        full = re.split(tie_regex,html)
+        
+        for e in range(len(team1)):
+        
+        	tied_check = re.match(ast_regex,team1[e])	
+        
+        	if tied_check:
+        
+        		replace_tie_locs1.append(e)
+        
+        	tied_check = re.match(ast_regex,team2[e])	
+        
+        	if tied_check:
+        
+        		replace_tie_locs2.append(e)
+        
+        if len(full) > 1:
+            
+            print len(full)
+        
+        
+        for k in range(len(full)):
+        
+        		if len(full[k]) < 12:
+        
+        			untied_vals.append(full[k])
+        
+        if len(untied_vals) > 0:
+        
+        	for m in range(len(replace_tie_locs1)):
+        
+        		team1[replace_tie_locs1[m]] = untied_vals[m]
+        
+        		team2[replace_tie_locs1[m]] = untied_vals[m+len(untied_vals)/2]
+            
+        list_of_line1s.append(team1)
+    
+        list_of_line2sP.append(team2)
+        
+    list_of_line2s = []
+    
+    for j in range(len(list_of_line2sP)):
+        
+        list_of_line2s.append(list_of_line2sP[len(list_of_line2sP)-(1+j)])
+    
+    all_lines = np.zeros((num_teams,10))
+    
+    for k in range(len(list_of_line1s)):
+        
+        for l in range(len(list_of_line1s[k])):
+            
+            a = float(list_of_line1s[k][l])
+            
+            b = float((list_of_line2s[k][l]))
+    
+            all_lines[k][l] = a
+    
+            all_lines[k+num_teams/2][l] = b
+    
+    xW = np.zeros((num_teams,1))
+    #
+    #xW = xW - 5
+    
+    xW_R = np.zeros((num_teams,1)) - 0.5
+    
+    xW_HR = np.zeros((num_teams,1)) - 0.5
+    
+    xW_RBI = np.zeros((num_teams,1)) - 0.5
+    
+    xW_SB = np.zeros((num_teams,1)) - 0.5
+    
+    xW_OPS = np.zeros((num_teams,1)) - 0.5
+    
+    xW_SV = np.zeros((num_teams,1)) - 0.5
+    
+    xW_K = np.zeros((num_teams,1)) - 0.5
+    
+    xW_ERA = np.zeros((num_teams,1)) - 0.5
+    
+    xW_WHIP = np.zeros((num_teams,1)) - 0.5
+    
+    xW_W = np.zeros((num_teams,1)) - 0.5
+    
+    for o in range(len(all_lines)):
+        
+        for m in range(len(all_lines)):
+            
+            for n in range(len(all_lines[o])):
+    
+                if n == 9:
+    
+                    if all_lines[o][n] < all_lines[m][n]:
+    
+                        xW_WHIP[o] = xW_WHIP[o] + 1
+        
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_WHIP[o] = xW_WHIP[o] + 0.5
+                
+                if n == 8:
+    
+                    if all_lines[o][n] < all_lines[m][n]:
+                        
+                        xW_ERA[o] = xW_ERA[o] + 1
+        
+                    if all_lines[o][n] == all_lines[m][n]:
+    
+                        xW_ERA[o] = xW_ERA[o] + 0.5
+    
+                if n == 7:
+                    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_K[o] = xW_K[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:             
+                        
+                        xW_K[o] = xW_K[o] + 0.5
+    
+                if n == 6:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_SV[o] = xW_SV[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_SV[o] = xW_SV[o] + 0.5
+    
+                if n == 5:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_W[o] = xW_W[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_W[o] = xW_W[o] + 0.5
+    
+                if n == 4:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_OPS[o] = xW_OPS[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_OPS[o] = xW_OPS[o] + 0.5
+    
+                if n == 3:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_SB[o] = xW_SB[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_SB[o] = xW_SB[o] + 0.5
+    
+                if n == 2:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+    
+                        xW_RBI[o] = xW_RBI[o] + 1
+    
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_RBI[o] = xW_RBI[o] + 0.5
+    
+                if n == 1:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+                        
+                        xW_HR[o] = xW_HR[o] + 1
+        
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_HR[o] = xW_HR[o] + 0.5
+    
+                if n == 0:
+    
+                    if all_lines[o][n] > all_lines[m][n]:
+                                    
+                        xW_R[o] = xW_R[o] + 1
+        
+                    if all_lines[o][n] == all_lines[m][n]:              
+                        
+                        xW_R[o] = xW_R[o] + 0.5
+    
+    xW = xW_R + xW_HR + xW_RBI + xW_SB + xW_OPS + xW_SV + xW_K + xW_ERA + xW_WHIP + xW_W
+
+
+    xW = xW/((num_teams-1)*num_cats)
+    
+    xW = np.transpose(xW)
+    
+    xWa[:,z] = xW
+    
+xWp = np.mean(xWa, axis=1)
+
+
+
+xWp = np.transpose(xWp)
+##
+s = pd.DataFrame(xWp, columns=['xW%'])
+##
+t = s.sort_values('xW%',ascending=0)    
+#    
+##    s.append(pd.DataFrame(xW,d,columns=['xW%']))
+##    
+##    t.append(s.sort_values('xW%',ascending=0))
+##
+print t
+    
+    
+#for l in range(len(list_of_line2s)):
+    
+    
+    
+#		
+#
+#bbq = []
+#
+#fast = []
+#
+#for i in range(len(stat_line2)):
+#
+#	bbq.append(len(stat_line2[i]))
+#
+#for j in range(len(team2)):
+#
+#	fast.append(len(team2[j]))
+#
+#
+#stat = re.split(ostats_regex,html)
+#
+#stat_trunc = []
+#
+#
+#
+##this line returns list of strings, some of which are unrounded tied values:
+#
+#tie_breaking = []
+#
+##if len(stat_trunc) != 20:
+#
+#	#ast_tied_values = re.split(ast_regex, html)
+#
+#	#if ast_tied_values:
+#
+#		#full contains strings, some of which are rounded, tie-breking values
+#
+#
+#
+#
+#
+##	for l in range(len(full[k])):
+#
+##		if full[k][l] == '>' or '<':
+#
+##			pass
+#
+##		else:
+#
+#			
+##			untied_vals.append(full[k])
+#
+#
+##print untied_vals
+#				
+#
+#
+##	if full:
+#
+##		for d in range(len(full)):
+#
+##			pass#if
+#
+#	
+#
+#
+#
+##for d in range(len(ast_tied_values)):
+#
+##	for e in range(len(ast_tied_values[d]):
+#
+##		if ast_tied_values[d]
+#
+#	
+#
+##
+##Ties sort of code:
+#
+#
+#
+#
+#
+#y_probe = []
+#
+#tie_counter = []
+#
+#
+#
+##for a in range(len(stat)):
+#
+##	tie = re.split(ast_regex,stat[a])
+#
+##	if tie:
+#
+##		ties.append(tie)
+#
+##		tie_counter.append(a)
+#
+#	
+#
+##for y in range(len(stat)):
+#
+##	if len(stat[y]) > 0 and len(stat[y]) < 7:
+#
+##		stat_line1.append(stat[y])
+#
+#		
+#
+##for x in range(len(stat_line1)-num_cats):
+#
+##	stat_line2.append(stat_line1[x+num_cats])
+#
+##stat_line1 = stat_line1[0:10]
+#
+##list_of_line1s.append(stat_line1)
+#
+##list_of_line2s.append(stat_line2)
+#
+#all_lines_list = []
+#
+##ascending_list_of_line2s = []
+#
+##for h in range(len(list_of_line1s)):
+#
+##	all_lines_list.append(list_of_line1s[h])
+#
+##	ascending_list_of_line2s.append(list_of_line2s[-(h+1)])
+#
+##for g in range(len(list_of_line2s)):
+#
+##	all_lines_list.append(list_of_line2s[g+len(list_of_line1s)])
+##print pairs	
+#
+#		#print team_name1
+#		#serum.append(int(team_name1.group(1)))
+#
+#		#	truth.append(j)
+#
+#	#for z in range(len(serum)):
+#
+#	#	if serum[z] == 25:
+#
+#	#		print serum[(z + 1)], z
+#
+#	#counter1 = 89677
+#
+#	#loc_string1 = ''
+#
+#	#for l in range(100):
+#
+#	#	loc_string1 = loc_string1 + html[l]
+#	
+#
+#
+#
+#	
+#	#query_args = {'user':'impropernewtonian@yahoo.com','pw':27 }
+#
+#	#This urlencodes your data (that's why we need to import urllib at the top)
+#
+#	#data = urllib.urlencode(query_args)
+#
+#	# Send HTTP POST request
+#
+#	#request = urllib2.request(url, data)
+#
+#	#respose = urllib2.urlopen(request)
+#
+#	#html = response.read()
+#
+#	#print the result
